@@ -4,7 +4,6 @@ Skill extraction using spaCy and skills database.
 
 from typing import List
 import spacy
-from spacy.util import is_package
 import config
 from utils.file_loader import load_skills_db
 
@@ -14,17 +13,15 @@ from utils.file_loader import load_skills_db
 # -------------------------------
 def load_spacy_model():
     """
-    Load spaCy NLP model safely for local and cloud environments.
+    Load spaCy NLP model safely for both local and Streamlit Cloud environments.
     """
-    model_name = config.NLP_MODEL
-
-    if is_package(model_name):
-        return spacy.load(model_name)
-
-    raise RuntimeError(
-        f"spaCy model '{model_name}' is not installed. "
-        "Make sure it is added to requirements.txt"
-    )
+    try:
+        return spacy.load(config.NLP_MODEL)
+    except OSError as e:
+        raise RuntimeError(
+            f"spaCy model '{config.NLP_MODEL}' not found. "
+            f"Ensure it is installed via requirements.txt.\n{e}"
+        )
 
 
 nlp = load_spacy_model()
@@ -53,14 +50,14 @@ def extract_skills(text: str) -> List[str]:
     doc = nlp(text.lower())
     extracted_skills = set()
 
-    # Extract single-word skills using POS tagging
+    # Extract single-word skills
     for token in doc:
         if token.pos_ in ("NOUN", "PROPN"):
             lemma = token.lemma_.lower()
             if lemma in skills_db_set:
                 extracted_skills.add(lemma)
 
-    # Extract multi-word skills (phrase matching)
+    # Extract multi-word skills
     text_lower = text.lower()
     for skill in skills_db_set:
         if skill in text_lower:
